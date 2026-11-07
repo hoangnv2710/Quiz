@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grammatik Quiz</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2b59c3">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f5f1;--fg:#1d1d1b;--card:#fff;--mut:#6b6b66;--ac:#2b59c3;--ok:#1f8a4c;--no:#c62f2f;--bd:#e0ded6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15161a;--fg:#ececea;--card:#202228;--mut:#9a9a96;--ac:#7ea2f5;--ok:#4cc27d;--no:#f06d6d;--bd:#34363e;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15161a;--fg:#ececea;--card:#202228;--mut:#9a9a96;--ac:#7ea2f5;--ok:#4cc27d;--no:#f06d6d;--bd:#34363e;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;padding:14px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h1{font-size:20px;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+.ic{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:6px 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:10px}
+.btn{display:block;width:100%;background:var(--ac);color:#fff;border:0;border-radius:12px;padding:14px;margin-top:10px;font-weight:600}
+.btn.sec{background:var(--card);color:var(--fg);border:1px solid var(--bd)}
+.topic{display:flex;gap:8px;align-items:center}
+.topic .tt{flex:1;text-align:left;background:none;border:0;padding:4px 0}
+.topic small,.mut{color:var(--mut);font-size:14px}
+.x{background:none;border:0;color:var(--mut);font-size:20px;padding:6px 10px}
+.q{font-size:21px;line-height:1.7;user-select:none;-webkit-user-select:none}
+.w{padding:2px 1px;border-radius:4px}
+.w:active{background:var(--bd)}
+.opt{display:block;width:100%;text-align:left;background:var(--card);border:2px solid var(--bd);border-radius:12px;padding:14px;margin-top:8px;font-size:18px}
+.opt.ok{border-color:var(--ok)}
+.opt.no{border-color:var(--no)}
+.bar{height:6px;background:var(--bd);border-radius:3px;margin-bottom:12px}
+.bar i{display:block;height:100%;background:var(--ac);border-radius:3px}
+.ex{border-left:4px solid var(--ac);background:var(--card);padding:10px 12px;border-radius:8px;margin-top:12px;user-select:none;-webkit-user-select:none}
+.big{font-size:44px;font-weight:700;text-align:center;margin:10px 0}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:20px;font-size:15px;max-width:90%;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+.hint{font-size:13px;color:var(--mut);text-align:center;margin-top:8px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>Grammatik Quiz</h1><span><button class="ic" id="fs" aria-label="Toàn màn hình">⛶</button> <button class="ic" id="th">🌓</button></span></header>
+<main id="app"></main>
+</div>
+<input type="file" id="file" accept=".txt,text/plain" multiple hidden>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s), app=$('#app');
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const rd=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const wr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let topics=rd('gq_topics',[]);
+const saveT=()=>wr('gq_topics',topics);
+
+/* theme */
+const th=rd('gq_theme',null); if(th)document.documentElement.dataset.theme=th;
+$('#th').onclick=()=>{const d=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');const n=d==='dark'?'light':'dark';document.documentElement.dataset.theme=n;wr('gq_theme',n)};
+
+/* fullscreen */
+$('#fs').onclick=()=>{try{const d=document,e=d.documentElement;if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d)}else{const r=e.requestFullscreen||e.webkitRequestFullscreen;if(r)r.call(e);else toast('Trình duyệt không hỗ trợ')}}catch(x){toast('Không bật được toàn màn hình')}};
+
+/* toast + copy */
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1500)}
+async function copy(t){
+  try{await navigator.clipboard.writeText(t)}catch(e){
+    let ok=false;try{const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;top:0;opacity:0';document.body.appendChild(a);a.focus();a.select();ok=document.execCommand('copy');a.remove()}catch(_){}
+    if(!ok){toast('Không copy được');return}
+  }
+  toast('Đã copy: '+(t.length>40?t.slice(0,40)+'…':t));
+}
+
+/* tap once = word, tap twice = sentence */
+const clean=w=>w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu,'');
+function words(t){return t.split(/(\s+)/).map(p=>/\S/.test(p)?'<span class="w">'+esc(p)+'</span>':p).join('')}
+function tappable(el,sentence){
+  let timer=null;
+  el.onclick=e=>{
+    const w=e.target.closest('.w');if(!w)return;
+    if(timer){clearTimeout(timer);timer=null;copy(sentence)}
+    else{timer=setTimeout(()=>{timer=null;copy(clean(w.textContent))},280)}
+  };
+}
+
+/* parser */
+function parse(text,fname){
+  let name=fname.replace(/\.txt$/i,''),desc='';const qs=[];
+  text.replace(/\r/g,'').split(/\n\s*\n/).forEach(b=>{
+    let q=null;
+    b.split('\n').forEach(l=>{
+      l=l.trim();if(!l)return;
+      if(l[0]==='#'){
+        let m=l.match(/^#\s*(Chủ đề|Topic)\s*:\s*(.*)/i);if(m){name=m[2];return}
+        m=l.match(/^#\s*(Mô tả|Desc)\s*:\s*(.*)/i);if(m)desc=m[2];return;
+      }
+      q=q||{t:'',ok:'',bad:[],ex:''};
+      if(l[0]==='=')q.ok=l.slice(1).trim();
+      else if(l[0]==='-')q.bad.push(l.slice(1).trim());
+      else if(l[0]==='?')q.ex=l.slice(1).trim();
+      else q.t=q.t?q.t+' '+l:l;
+    });
+    if(q&&q.t&&q.ok&&q.bad.length)qs.push(q);
+  });
+  return {id:Date.now()+Math.random(),name,desc,qs};
+}
+function addTopic(t){
+  if(!t.qs.length){toast('File không có câu hợp lệ');return}
+  const i=topics.findIndex(x=>x.name===t.name);
+  if(i>=0)topics[i]=t;else topics.push(t);
+  saveT();
+}
+
+const SAMPLE=`# Chủ đề: Dativ - Giới từ
+# Mô tả: mit, bei, nach, zu
+
+Ich fahre mit ___ Bus.
+= dem
+- den
+- der
+- das
+? "mit" luôn đi với Dativ. Bus giống đực, nên dem.
+
+Sie wohnt bei ___ Eltern.
+= ihren
+- ihre
+- ihrer
+- ihr
+? "bei" + Dativ, số nhiều nên thêm -n: ihren.
+
+Nach ___ Unterricht gehe ich nach Hause.
+= dem
+- den
+- das
+? "nach" + Dativ. Unterricht giống đực: dem.
+
+Er geht zu ___ Arzt.
+= dem
+- den
+- der
+? "zu" + Dativ. Arzt giống đực: dem.`;
+
+/* views */
+let S={};
+function home(){
+  S={};try{if(location.hash)location.hash=''}catch(e){}
+  app.innerHTML=(topics.length?topics.map((t,i)=>`<div class="card topic"><button class="tt" data-s="${i}"><b>${esc(t.name)}</b><br><small>${t.qs.length} câu${t.desc?' · '+esc(t.desc):''}</small></button><button class="x" data-d="${i}" aria-label="Xóa">✕</button></div>`).join(''):'<div class="card mut">Chưa có chủ đề nào. Thêm file .txt hoặc nạp bài mẫu để thử.</div>')
+  +'<button class="btn" id="add">＋ Thêm chủ đề (.txt)</button><button class="btn sec" id="sam">Nạp bài mẫu</button>'
+  +'<div class="hint">Trong lúc làm bài: chạm 1 lần vào từ để copy từ, chạm 2 lần để copy cả câu.</div>';
+  app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>start(topics[b.dataset.s].qs,b.dataset.s));
+  app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{if(confirm('Xóa chủ đề này?')){topics.splice(b.dataset.d,1);saveT();home()}});
+  $('#add').onclick=()=>$('#file').click();
+  $('#sam').onclick=()=>{addTopic(parse(SAMPLE,'mau'));home()};
+}
+$('#file').onchange=async e=>{
+  for(const f of e.target.files){addTopic(parse(await f.text(),f.name))}
+  e.target.value='';home();
+};
+
+function start(list,ti){S={list:shuffle(list),i:0,ti,opts:[],pick:[],active:true};try{location.hash='quiz'}catch(e){}quiz()}
+window.addEventListener('hashchange',()=>{if(S.active&&!location.hash)home()});
+function quiz(){
+  const q=S.list[S.i];if(!S.opts[S.i])S.opts[S.i]=shuffle([q.ok,...q.bad]);
+  const opts=S.opts[S.i];
+  app.innerHTML=`<div class="top"><button class="ic" id="qt">✕ Thoát</button><span class="mut">Câu ${S.i+1}/${S.list.length}</span></div>
+  <div class="bar"><i style="width:${S.i/S.list.length*100}%"></i></div>
+  <div class="card q" id="q">${words(q.t)}</div>
+  <div id="opts">${opts.map(o=>`<button class="opt">${esc(o)}</button>`).join('')}</div>
+  <div id="fb"></div>
+  ${S.i>0?'<button class="btn sec" id="pv">‹ Câu trước</button>':''}`;
+  tappable($('#q'),q.t);
+  $('#qt').onclick=home;
+  if($('#pv'))$('#pv').onclick=()=>{S.i--;quiz()};
+  app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(S.pick[S.i]===undefined){S.pick[S.i]=b.textContent;show(q)}});
+  if(S.pick[S.i]!==undefined)show(q);
+}
+function show(q){
+  const p=S.pick[S.i];
+  app.querySelectorAll('.opt').forEach(o=>{if(o.textContent===q.ok)o.classList.add('ok');else if(o.textContent===p)o.classList.add('no')});
+  const full=q.t.replace(/_{2,}/g,q.ok);
+  $('#q').innerHTML=words(full);tappable($('#q'),full);
+  const last=S.i+1>=S.list.length;
+  $('#fb').innerHTML=(q.ex?`<div class="ex" id="ex">${words(q.ex)}</div>`:'')+`<button class="btn" id="nx">${last?'Xem kết quả':'Câu tiếp'}</button>`;
+  if(q.ex)tappable($('#ex'),q.ex);
+  $('#nx').onclick=()=>{if(last)result();else{S.i++;quiz()}};
+}
+function result(){
+  const n=S.list.length;S.wrong=S.list.filter((q,i)=>S.pick[i]!==q.ok);S.score=n-S.wrong.length;
+  app.innerHTML=`<div class="card"><div class="big">${S.score}/${n}</div><div class="mut" style="text-align:center">${S.wrong.length?'Còn '+S.wrong.length+' câu sai':'Tuyệt vời, đúng hết!'}</div></div>`
+  +(S.wrong.length?`<div class="card"><b>Câu sai</b>${S.wrong.map(q=>`<div style="margin-top:8px">${esc(q.t.replace(/_{2,}/g,'['+q.ok+']'))}</div>`).join('')}</div><button class="btn" id="rw">Ôn lại câu sai</button>`:'')
+  +'<button class="btn sec" id="bk">‹ Xem lại câu cuối</button><button class="btn sec" id="hm">Về danh sách chủ đề</button>';
+  if($('#rw'))$('#rw').onclick=()=>start(S.wrong,S.ti);
+  $('#hm').onclick=home;$('#bk').onclick=()=>{S.i=S.list.length-1;quiz()};
+}
+home();
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
+</script>
+</body>
+</html>
